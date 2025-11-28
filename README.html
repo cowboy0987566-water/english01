@@ -1,1 +1,572 @@
-# english01
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GEPT 詞彙網絡旗艦版 v11.0</title>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+    /* --- 全局設定 --- */
+    body { 
+        font-family: 'Nunito', 'Noto Sans TC', sans-serif; 
+        background-color: #f3f4f6; 
+        overflow: hidden; 
+        margin: 0; padding: 0; 
+        height: 100vh; 
+        display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    }
+
+    /* --- 頂部功能列 --- */
+    .top-bar {
+        width: 100%; max-width: 500px; padding: 15px 20px; box-sizing: border-box;
+        display: flex; justify-content: space-between; align-items: center;
+        background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.05); z-index: 50;
+    }
+    
+    .daily-stats { font-size: 14px; font-weight: 700; color: #4b5563; display: flex; gap: 15px; }
+    .stat-pill { display: flex; align-items: center; gap: 6px; }
+    .stat-pill.learned { color: #10b981; }
+    .stat-pill.unknown { color: #ef4444; }
+
+    .calendar-btn {
+        background: #f3f4f6; border: none; width: 40px; height: 40px; border-radius: 12px;
+        color: #374151; font-size: 18px; cursor: pointer; transition: 0.2s;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .calendar-btn:active { transform: scale(0.95); background: #e5e7eb; }
+
+    /* --- 卡片堆疊區 --- */
+    .card-stack {
+        position: relative; width: 94%; max-width: 450px; height: 82vh; margin-top: 15px; perspective: 1000px;
+    }
+
+    /* --- 卡片本體 --- */
+    .card {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: white; border-radius: 24px; box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1);
+        padding: 0; box-sizing: border-box;
+        display: flex; flex-direction: column; 
+        transform-origin: 50% 100%; cursor: grab; user-select: none; touch-action: none;
+        overflow: hidden; 
+    }
+
+    /* 卡片內容捲動區 */
+    .card-content-scroll {
+        flex: 1; overflow-y: auto; padding: 25px 20px 80px 20px;
+        display: flex; flex-direction: column; align-items: flex-start;
+    }
+
+    /* 單字頭部 (置中) */
+    .word-header { 
+        text-align: center; margin-bottom: 15px; border-bottom: 2px solid #f3f4f6; 
+        padding-bottom: 15px; width: 100%; align-self: center;
+    }
+    .pos-badge { background: #eff6ff; color: #3b82f6; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 800; display: inline-block; margin-bottom: 8px; }
+    .word-text { font-size: 42px; font-weight: 800; color: #111827; line-height: 1.1; margin: 0; }
+    .kk-text { font-family: 'Arial', sans-serif; font-size: 16px; color: #9ca3af; margin-top: 4px; margin-bottom: 12px;}
+    
+    /* 定義區塊 */
+    .def-container { text-align: left; background: #f9fafb; padding: 12px; border-radius: 12px; margin-top: 10px; border-left: 4px solid #3b82f6;}
+    .def-en { font-size: 15px; color: #1f2937; font-weight: 600; line-height: 1.4; margin-bottom: 4px; }
+    .def-ch { font-size: 14px; color: #6b7280; font-weight: 500; }
+
+    /* 近義詞/反義詞區塊 (New) */
+    .lexical-box {
+        width: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 15px;
+    }
+    .relation-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .relation-label { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #9ca3af; min-width: 35px; }
+    
+    .word-tag { 
+        padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 700; 
+        cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 4px;
+    }
+    .word-tag:active { transform: scale(0.95); opacity: 0.8; }
+    
+    .tag-syn { background: #ecfeff; color: #0891b2; border: 1px solid #cffafe; } /* 青色系 */
+    .tag-ant { background: #fff1f2; color: #e11d48; border: 1px solid #ffe4e6; } /* 紅色系 */
+
+
+    /* 通用標題 */
+    .section-title { font-size: 13px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin: 30px 0 10px 0; width: 100%; display: flex; align-items: center; gap: 8px;}
+    .section-title i { font-size: 14px; }
+
+    /* 搭配詞區塊 */
+    .colloc-list { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+    .colloc-item { 
+        background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; 
+        display: flex; flex-direction: column; gap: 8px; border-left: 4px solid #10b981;
+    }
+    .colloc-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 5px; margin-bottom: 4px; border-bottom: 1px dashed #e5e7eb; padding-bottom: 8px;}
+    .colloc-en { font-size: 16px; font-weight: 700; color: #065f46; }
+    .colloc-ch { font-size: 14px; color: #6b7280; }
+    
+    .colloc-sent-box { display: flex; align-items: flex-start; gap: 8px; }
+    .mini-play-btn { 
+        background: #ecfdf5; color: #059669; border: none; width: 24px; height: 24px; border-radius: 50%; 
+        display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-size: 12px; margin-top: 2px;
+    }
+    .colloc-sent-text { font-size: 13px; color: #4b5563; line-height: 1.4; }
+    .colloc-sent-ch { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+
+    /* 影音原典區塊 */
+    .media-list { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+    .media-item { 
+        background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 15px; 
+        display: flex; flex-direction: column; gap: 8px; border-left: 4px solid #8b5cf6;
+        position: relative; overflow: hidden;
+    }
+    .media-badge {
+        position: absolute; top: 0; right: 0; background: #8b5cf6; color: white; 
+        font-size: 10px; padding: 3px 8px; border-bottom-left-radius: 8px; font-weight: bold;
+    }
+    .media-source { font-size: 12px; color: #8b5cf6; font-weight: 800; margin-bottom: 2px; text-transform: uppercase;}
+    .media-content { display: flex; align-items: flex-start; gap: 10px; }
+    .media-play-btn {
+        background: #f3f4f6; color: #8b5cf6; border: none; width: 32px; height: 32px; border-radius: 50%; 
+        display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-size: 14px; margin-top: 2px;
+    }
+    .media-text-en { font-size: 15px; font-weight: 700; color: #1f2937; line-height: 1.4; font-style: italic;}
+    .media-text-ch { font-size: 13px; color: #6b7280; margin-top: 4px; }
+
+
+    /* 滑動提示 Overlay */
+    .swipe-overlay {
+        position: absolute; top: 50px; z-index: 20;
+        font-size: 32px; font-weight: 800; text-transform: uppercase; border: 4px solid; padding: 5px 10px; border-radius: 8px; opacity: 0; transform: rotate(-15deg); pointer-events: none;
+    }
+    .overlay-nope { right: 40px; color: #ef4444; border-color: #ef4444; transform: rotate(15deg); } 
+    .overlay-like { left: 40px; color: #10b981; border-color: #10b981; transform: rotate(-15deg); } 
+
+    /* 底部說明 */
+    .instruction { position: absolute; bottom: 20px; font-size: 13px; color: #94a3b8; display: flex; gap: 20px; pointer-events: none;}
+    .key-hint { display: flex; align-items: center; gap: 5px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    /* --- 行事曆 Modal --- */
+    .modal {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center;
+    }
+    .modal-content {
+        background: white; width: 90%; max-width: 400px; border-radius: 20px; padding: 25px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+    }
+    .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .cal-title { font-size: 18px; font-weight: 800; color: #111827; }
+    .close-btn { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+    
+    /* 月曆 Grid */
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
+    .cal-day-name { font-size: 12px; font-weight: bold; color: #9ca3af; margin-bottom: 10px; }
+    .cal-day { 
+        height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; 
+        padding-top: 5px; border-radius: 8px; font-size: 14px; font-weight: 600; color: #374151; position: relative; background: #f9fafb;
+    }
+    .cal-day.today { background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; }
+    .cal-stats-row { display: flex; gap: 4px; font-size: 9px; margin-top: 2px; font-weight: 800; }
+    .cal-learned { color: #10b981; }
+    .cal-unknown { color: #ef4444; }
+
+    /* 完課畫面 */
+    .finished-view { display: none; text-align: center; padding-top: 150px; width: 100%; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div class="daily-stats">
+        <div class="stat-pill learned" title="今日已學會">
+            <i class="fas fa-check-circle"></i>
+            <span id="todayLearned">0</span>
+        </div>
+        <div class="stat-pill unknown" title="今日還不熟">
+            <i class="fas fa-times-circle"></i>
+            <span id="todayUnknown">0</span>
+        </div>
+    </div>
+    <button class="calendar-btn" onclick="openCalendar()">
+        <i class="far fa-calendar-alt"></i>
+    </button>
+</div>
+
+<div class="card-stack" id="cardStack"></div>
+
+<div id="finishedView" class="finished-view">
+    <h1 style="font-size: 60px; margin-bottom: 0;">🎉</h1>
+    <h2 style="color:#111827;">本日任務完成！</h2>
+    <p style="color:#6b7280;">太棒了，請繼續保持。</p>
+    <button onclick="restartApp()" style="background:#10b981; color:white; border:none; padding:15px 40px; border-radius:30px; font-size:16px; cursor:pointer; font-weight:bold; margin-top: 20px;">
+        重新開始
+    </button>
+</div>
+
+<div class="instruction">
+    <div class="key-hint"><div class="dot" style="background:#ef4444"></div> ← 還不熟</div>
+    <div class="key-hint"><div class="dot" style="background:#10b981"></div> 已學會 →</div>
+</div>
+
+<div class="modal" id="calendarModal">
+    <div class="modal-content">
+        <div class="cal-header">
+            <div class="cal-title" id="calMonthTitle">Calendar</div>
+            <button class="close-btn" onclick="closeCalendar()">&times;</button>
+        </div>
+        <div class="calendar-grid">
+            <div class="cal-day-name">Sun</div><div class="cal-day-name">Mon</div><div class="cal-day-name">Tue</div>
+            <div class="cal-day-name">Wed</div><div class="cal-day-name">Thu</div><div class="cal-day-name">Fri</div>
+            <div class="cal-day-name">Sat</div>
+        </div>
+        <div class="calendar-grid" id="calGrid"></div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // 🔴 v11.0 資料庫 (新增：Synonyms 近義詞, Antonyms 反義詞)
+    // ==========================================
+    const fullDictionary = [
+        {
+            word: "Offer",
+            kk: "[ˋɔfɚ]",
+            pos: "v.",
+            defEn: "To ask someone if they would like to have something.",
+            defCh: "提供；主動給予；報價",
+            // 新增：近義詞與反義詞
+            synonyms: ["Provide", "Propose", "Suggest", "Give"],
+            antonyms: ["Refuse", "Take", "Withdraw"],
+            
+            collocs: [
+                { en: "offer a job", ch: "提供工作", sentEn: "They offered him a job in London.", sentCh: "他們在倫敦給了他一份工作。" },
+                { en: "offer help", ch: "主動幫忙", sentEn: "She offered help when I was moving.", sentCh: "我搬家時她主動幫忙。" },
+                { en: "special offer", ch: "特價優惠", sentEn: "This is a special offer for today only.", sentCh: "這只是今天的特別優惠。" }
+            ],
+            media: [
+                { type: "Movie", source: "The Godfather", en: "I'm gonna make him an offer he can't refuse.", ch: "我會開出一個他無法拒絕的條件。" },
+                { type: "Song", source: "Adele", en: "I had no choice but to hear you out, and offer myself.", ch: "我別無選擇，只能聽你說完，並奉獻我自己。" }
+            ]
+        },
+        {
+            word: "Force",
+            kk: "[fors]",
+            pos: "n. / v.",
+            defEn: "Strength or power used to make something happen.",
+            defCh: "力量；強迫",
+            synonyms: ["Power", "Strength", "Compel", "Push"],
+            antonyms: ["Weakness", "Persuade"],
+            
+            collocs: [
+                { en: "use force", ch: "使用武力", sentEn: "The police had to use force.", sentCh: "警方不得不使用武力。" },
+                { en: "force a smile", ch: "強顏歡笑", sentEn: "She forced a smile for the camera.", sentCh: "她對著鏡頭勉強擠出笑容。" }
+            ],
+            media: [
+                { type: "Movie", source: "Star Wars", en: "May the Force be with you.", ch: "願原力與你同在。" },
+                { type: "YouTube", source: "Ted Talk", en: "We are a force for change.", ch: "我們是推動改變的力量。" }
+            ]
+        },
+        {
+            word: "Memory",
+            kk: "[ˋmɛmərɪ]",
+            pos: "n.",
+            defEn: "The ability to remember information, experiences, and people.",
+            defCh: "記憶；回憶",
+            synonyms: ["Recollection", "Remembrance", "Mind"],
+            antonyms: ["Amnesia", "Forgetfulness"],
+            
+            collocs: [
+                { en: "good memory", ch: "好記性", sentEn: "He has a very good memory for names.", sentCh: "他記名字的記性很好。" },
+                { en: "lose memory", ch: "失去記憶", sentEn: "The accident made him lose his memory.", sentCh: "這場意外讓他失去了記憶。" }
+            ],
+            media: [
+                { type: "Song", source: "Maroon 5", en: "Memories bring back, memories bring back you.", ch: "回憶湧現，回憶帶我回到了你身邊。" },
+                { type: "Movie", source: "Inside Out", en: "This is a core memory!", ch: "這是核心記憶！" }
+            ]
+        }
+    ];
+
+    // ==========================================
+    // 🟠 學習歷程系統
+    // ==========================================
+    const STORAGE_KEY = 'gept_learning_history_v4';
+
+    function getTodayString() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    function getHistory() {
+        const data = localStorage.getItem(STORAGE_KEY);
+        return data ? JSON.parse(data) : {};
+    }
+
+    function saveProgress(type) {
+        const history = getHistory();
+        const today = getTodayString();
+        if (!history[today]) history[today] = { learned: 0, unknown: 0 };
+        history[today][type]++;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        updateStatsUI();
+    }
+
+    function updateStatsUI() {
+        const history = getHistory();
+        const today = getTodayString();
+        const stats = history[today] || { learned: 0, unknown: 0 };
+        document.getElementById('todayLearned').innerText = stats.learned;
+        document.getElementById('todayUnknown').innerText = stats.unknown;
+    }
+
+    // ==========================================
+    // 🟡 App 核心邏輯
+    // ==========================================
+    let studyList = [...fullDictionary];
+    
+    updateStatsUI();
+    renderCard();
+
+    function renderCard() {
+        const stack = document.getElementById('cardStack');
+        stack.innerHTML = ""; 
+
+        if (studyList.length === 0) {
+            document.getElementById('finishedView').style.display = 'block';
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            return;
+        }
+
+        const data = studyList[0]; 
+        const card = document.createElement('div');
+        card.className = 'card';
+        
+        // 1. 生成近義詞 HTML
+        let synonymsHTML = "";
+        if (data.synonyms && data.synonyms.length > 0) {
+            synonymsHTML = `
+                <div class="relation-row">
+                    <span class="relation-label">Syn</span>
+                    ${data.synonyms.map(word => `<span class="word-tag tag-syn" onclick="speakText('${word}', 0.9); event.stopPropagation();">${word}</span>`).join('')}
+                </div>
+            `;
+        }
+
+        // 2. 生成反義詞 HTML
+        let antonymsHTML = "";
+        if (data.antonyms && data.antonyms.length > 0) {
+            antonymsHTML = `
+                <div class="relation-row">
+                    <span class="relation-label">Ant</span>
+                    ${data.antonyms.map(word => `<span class="word-tag tag-ant" onclick="speakText('${word}', 0.9); event.stopPropagation();">${word}</span>`).join('')}
+                </div>
+            `;
+        }
+
+        // 3. 搭配詞 HTML
+        const collocHTML = data.collocs.map(c => `
+            <div class="colloc-item">
+                <div class="colloc-header">
+                    <span class="colloc-en">${c.en}</span>
+                    <span class="colloc-ch">${c.ch}</span>
+                </div>
+                <div class="colloc-sent-box">
+                    <button class="mini-play-btn" onclick="speakText('${c.sentEn.replace(/'/g, "\\'")}', 0.9)">
+                        <i class="fas fa-volume-up"></i>
+                    </button>
+                    <div>
+                        <div class="colloc-sent-text">${c.sentEn}</div>
+                        <div class="colloc-sent-ch">${c.sentCh}</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        // 4. 影音原典 HTML
+        let mediaHTML = "";
+        if (data.media && data.media.length > 0) {
+            mediaHTML = data.media.map(m => `
+                <div class="media-item">
+                    <div class="media-badge">${m.type}</div>
+                    <div class="media-source">${m.source}</div>
+                    <div class="media-content">
+                        <button class="media-play-btn" onclick="speakText('${m.en.replace(/'/g, "\\'")}', 0.9)">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <div>
+                            <div class="media-text-en">"${m.en}"</div>
+                            <div class="media-text-ch">${m.ch}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            mediaHTML = `<div class="section-title"><i class="fas fa-film"></i> In Movies & Music</div><div class="media-list">${mediaHTML}</div>`;
+        }
+
+        // 5. 組合卡片
+        card.innerHTML = `
+            <div class="swipe-overlay overlay-nope">還不熟</div>
+            <div class="swipe-overlay overlay-like">已學會</div>
+
+            <div class="card-content-scroll">
+                <div class="word-header">
+                    <span class="pos-badge">${data.pos}</span>
+                    <h1 class="word-text">${data.word}</h1>
+                    <div class="kk-text">${data.kk}</div>
+                    
+                    <button class="sent-play-btn" style="margin: 0 auto; width:45px; height:45px; font-size:20px;" onclick="speakText('${data.word}', 0.8)">
+                        <i class="fas fa-volume-up"></i>
+                    </button>
+
+                    <div class="def-container">
+                        <div class="def-en">${data.defEn}</div>
+                        <div class="def-ch">${data.defCh}</div>
+                    </div>
+
+                    <div class="lexical-box">
+                        ${synonymsHTML}
+                        ${antonymsHTML}
+                    </div>
+                </div>
+
+                <div class="section-title"><i class="fas fa-link"></i> Collocations</div>
+                <div class="colloc-list">
+                    ${collocHTML}
+                </div>
+
+                ${mediaHTML}
+
+            </div>
+        `;
+
+        stack.appendChild(card);
+        initSwipe(card);
+    }
+
+    // 滑動引擎
+    function initSwipe(card) {
+        let startX = 0, currentX = 0, isDragging = false;
+        const threshold = 80; 
+
+        card.addEventListener('touchstart', e => startDrag(e.touches[0].clientX));
+        card.addEventListener('touchmove', e => onDrag(e.touches[0].clientX));
+        card.addEventListener('touchend', endDrag);
+        card.addEventListener('mousedown', e => startDrag(e.clientX));
+        document.addEventListener('mousemove', e => { if(isDragging) onDrag(e.clientX); });
+        document.addEventListener('mouseup', () => { if(isDragging) endDrag(); });
+
+        function startDrag(x) { isDragging = true; startX = x; card.style.transition = 'none'; }
+        
+        function onDrag(x) {
+            if (!isDragging) return;
+            currentX = x - startX;
+            const rotate = currentX * 0.05;
+            card.style.transform = `translateX(${currentX}px) rotate(${rotate}deg)`;
+
+            const opacity = Math.min(Math.abs(currentX) / 100, 1);
+            if (currentX > 0) {
+                card.querySelector('.overlay-like').style.opacity = opacity;
+                card.querySelector('.overlay-nope').style.opacity = 0;
+            } else {
+                card.querySelector('.overlay-nope').style.opacity = opacity;
+                card.querySelector('.overlay-like').style.opacity = 0;
+            }
+        }
+        
+        function endDrag() {
+            isDragging = false; card.style.transition = 'transform 0.4s ease-in-out';
+            if (currentX > threshold) {
+                card.style.transform = `translateX(1000px) rotate(30deg)`; markKnown();
+            } else if (currentX < -threshold) {
+                card.style.transform = `translateX(-1000px) rotate(-30deg)`; markUnknown();
+            } else {
+                card.style.transform = `translateX(0px) rotate(0deg)`;
+                card.querySelector('.overlay-like').style.opacity = 0;
+                card.querySelector('.overlay-nope').style.opacity = 0;
+            }
+        }
+    }
+
+    function markKnown() {
+        saveProgress('learned');
+        studyList.shift();
+        setTimeout(() => { renderCard(); confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 }, colors: ['#10b981', '#34d399'] }); }, 300);
+    }
+
+    function markUnknown() {
+        saveProgress('unknown');
+        const current = studyList.shift();
+        studyList.push(current);
+        setTimeout(() => { renderCard(); }, 300);
+    }
+
+    function speakText(text, rate) {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'en-US';
+        u.rate = rate || 0.8;
+        window.speechSynthesis.speak(u);
+    }
+
+    function restartApp() { location.reload(); }
+
+    // ==========================================
+    // 🔵 行事曆功能
+    // ==========================================
+    function openCalendar() {
+        document.getElementById('calendarModal').style.display = 'flex';
+        renderCalendar();
+    }
+    
+    function closeCalendar() {
+        document.getElementById('calendarModal').style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('calendarModal')) closeCalendar();
+    }
+
+    function renderCalendar() {
+        const grid = document.getElementById('calGrid');
+        grid.innerHTML = "";
+        
+        const now = new Date();
+        const currentMonth = now.getMonth(); 
+        const currentYear = now.getFullYear();
+        
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        document.getElementById('calMonthTitle').innerText = `${monthNames[currentMonth]} ${currentYear}`;
+
+        const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        const history = getHistory();
+
+        for (let i = 0; i < firstDay; i++) {
+            grid.appendChild(document.createElement('div'));
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            const dayData = history[dateStr];
+            
+            const cell = document.createElement('div');
+            cell.className = 'cal-day';
+            if (day === now.getDate() && currentMonth === now.getMonth()) cell.classList.add('today');
+
+            cell.innerHTML = `<span>${day}</span>`;
+
+            if (dayData) {
+                const statsRow = document.createElement('div');
+                statsRow.className = 'cal-stats-row';
+                if (dayData.learned > 0) statsRow.innerHTML += `<span class="cal-learned">+${dayData.learned}</span>`;
+                if (dayData.unknown > 0) statsRow.innerHTML += `<span class="cal-unknown">-${dayData.unknown}</span>`;
+                cell.appendChild(statsRow);
+            }
+
+            grid.appendChild(cell);
+        }
+    }
+</script>
+
+</body>
+</html>
