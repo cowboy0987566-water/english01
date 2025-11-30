@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>GEPT 結構分離版 v24.0</title>
+<title>GEPT 結構分離版 v27.0</title>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -14,9 +14,8 @@
     /* --- 核心設定 --- */
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     
-    :root {
-        --fs-word: 42px; --fs-content: 15px; --fs-sub: 13px;
-    }
+    /* CSS 變數：字體大小 */
+    :root { --fs-word: 42px; --fs-content: 15px; --fs-sub: 13px; }
     [data-fontsize="small"] { --fs-word: 36px; --fs-content: 13px; --fs-sub: 12px; }
     [data-fontsize="medium"] { --fs-word: 42px; --fs-content: 15px; --fs-sub: 13px; }
     [data-fontsize="large"] { --fs-word: 52px; --fs-content: 18px; --fs-sub: 15px; }
@@ -49,10 +48,9 @@
     /* 卡片區 */
     .card-stack { width: 94%; max-width: 450px; height: 100%; position: relative; margin: 15px 0; perspective: 1000px; min-height: 0; }
     .card { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; border-radius: 24px; box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1); padding: 0; display: flex; flex-direction: column; transform-origin: 50% 100%; cursor: grab; user-select: none; touch-action: none; overflow: hidden; transition: transform 0.5s ease-out, opacity 0.5s; }
-    .card.cursor-default { cursor: default; }
     .card-content-scroll { flex: 1; overflow-y: auto; padding: 25px 20px 40px 20px; display: flex; flex-direction: column; align-items: flex-start; -webkit-overflow-scrolling: touch; }
 
-    /* 按鈕區 */
+    /* 底部按鈕區 */
     .action-buttons { width: 100%; max-width: 420px; display: flex; gap: 15px; padding: 5px 20px 15px 20px; padding-bottom: calc(env(safe-area-inset-bottom) + 20px); }
     .btn-action { flex: 1; border: none; border-radius: 14px; padding: 10px 5px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; position: relative; transition: transform 0.1s; }
     .btn-action:active { transform: translateY(3px); box-shadow: none !important; }
@@ -105,6 +103,7 @@
     .media-badge { position: absolute; top: 0; right: 0; background: #8b5cf6; color: white; font-size: 10px; padding: 2px 8px; border-bottom-left-radius: 8px; font-weight: bold; }
     .media-source { font-size: 11px; color: #8b5cf6; font-weight: 800; text-transform: uppercase;}
     .sent-box { display: flex; align-items: flex-start; gap: 8px; } .sent-text-group { flex: 1; } .sent-text-ch { margin-top: 2px; }
+    
     .finished-view { display: none; text-align: center; padding-top: 150px; width: 100%; height: 100%; position: absolute; top: 0; left: 0; background: #f3f4f6; z-index: 100; flex-direction: column; justify-content: center; align-items: center; }
 
     /* Modals */
@@ -223,13 +222,10 @@
 </div>
 
 <script>
-    // ==========================================
-    // 程式邏輯
-    // ==========================================
     let userSettings = { gender: 'female', showTrans: true, showColloc: true, showMedia: true, showSynAnt: true, showKeyPoint: true, fontSize: 'medium' };
     let studyList = [];
     let availableVoices = [];
-    const STORAGE_KEY = 'gept_v23_history';
+    const STORAGE_KEY = 'gept_v24_1_history';
 
     window.speechSynthesis.onvoiceschanged = function() { availableVoices = window.speechSynthesis.getVoices(); };
 
@@ -244,11 +240,13 @@
         updateFontSizeBtnUI();
     }
     function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
+    
     function changeVoiceSetting(gender) { userSettings.gender = gender; updateVoiceBtnUI(); }
     function updateVoiceBtnUI() {
         document.getElementById('voiceBtnF').classList.toggle('active', userSettings.gender === 'female');
         document.getElementById('voiceBtnM').classList.toggle('active', userSettings.gender === 'male');
     }
+
     function changeFontSize(size) {
         userSettings.fontSize = size;
         document.body.setAttribute('data-fontsize', size);
@@ -260,6 +258,7 @@
         document.getElementById('fsMedium').classList.toggle('active', size === 'medium');
         document.getElementById('fsLarge').classList.toggle('active', size === 'large');
     }
+
     function updateSettings() {
         userSettings.showTrans = document.getElementById('toggleTrans').checked;
         userSettings.showColloc = document.getElementById('toggleColloc').checked;
@@ -270,6 +269,9 @@
     }
 
     function startLevel(level) {
+        // ⚠️ 注意：這裡直接使用 fullDictionary (因為已經載入 data.js)
+        if (typeof fullDictionary === 'undefined') { alert("無法讀取 data.js，請確保檔案在同一目錄"); return; }
+        
         studyList = fullDictionary.filter(item => item.level === level);
         if (studyList.length === 0) { alert("此等級資料庫為空！"); return; }
         document.getElementById('menuScreen').style.display = 'none';
@@ -464,7 +466,6 @@
         }
     }
 </script>
-<script src="data.js"></script>
 
 </body>
 </html>
